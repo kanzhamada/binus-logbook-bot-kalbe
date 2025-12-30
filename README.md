@@ -153,9 +153,6 @@ logbook_bot/
 - The bot expects Binus dates like `Thu, 02 Oct 2025` and Glide dates like `02 October 2025`.
 - If formats change, the date parsing logic in `src/core/bot.ts` might need adjustment.
 
-**Q: "OFF" days are not handled.**
-- Ensure the activity log in Glide contains the word "OFF" (case-insensitive) in the description or title.
-
 ## 🔒 Security & Privacy
 
 - ✅ **Local Storage**: All data stays on your computer.
