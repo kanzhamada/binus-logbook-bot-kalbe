@@ -1,5 +1,6 @@
 import LoginBot from './core/login.js';
 import ActivityBot from './core/bot.js';
+import { GlideBot } from './core/glide.js';
 import { BotConfig } from './types/bot.js';
 import { getMonthName, getSemesterCode } from './utils/mapping.js';
 import * as dotenv from 'dotenv';
@@ -12,10 +13,48 @@ dotenv.config({
 });
 
 async function main() {
+  const logbookMonthEnv = process.env.LOGBOOK_MONTH || 'SEP';
+  const internshipSemesterEnv = process.env.INTERNSHIP_SEMESTER || 'ODD';
+  const email = process.env.EMAIL;
+
+  if (!email) {
+    console.error('❌ Email not found in environment variables');
+    process.exit(1);
+  }
+
+  // Phase 0: Scrape data from Glide
+  console.log('🚀 Starting Glide scraping...');
+  const glideBot = new GlideBot(email);
+  let scrapedData: any[] = [];
+
+  try {
+    await glideBot.login();
+    // Use the configured month for scraping
+    // Note: GlideBot.scrapeData might need month name or number. 
+    // getMonthName returns "September", "October" etc.
+    // Let's assume Glide uses full month name.
+    const monthName = getMonthName(logbookMonthEnv);
+    const year = new Date().getFullYear().toString(); // Default to current year
+    
+    scrapedData = await glideBot.scrapeData(monthName, year);
+    console.log(`✅ Scraped ${scrapedData.length} activities from Glide`);
+  } catch (error) {
+    console.error('❌ Glide scraping failed:', error);
+    process.exit(1);
+  } finally {
+    await glideBot.close();
+  }
+
+  if (scrapedData.length === 0) {
+    console.log('⚠️ No data scraped. Exiting...');
+    process.exit(0);
+  }
+
+  // Phase 1: Login to Binus
   const loginBot = new LoginBot();
   
   try {
-    console.log('🚀 Starting logbook automation bot...');
+    console.log('🚀 Starting Binus logbook automation...');
     
     // Always perform fresh login
     const success = await loginBot.login();
@@ -24,10 +63,6 @@ async function main() {
       console.log('❌ Login failed');
       process.exit(1);
     }
-    
-    // Initialize activity bot with configuration from environment variables
-    const logbookMonthEnv = process.env.LOGBOOK_MONTH || 'SEP';
-    const internshipSemesterEnv = process.env.INTERNSHIP_SEMESTER || 'ODD';
     
     const botConfig: BotConfig = {
       clockInTime: process.env.CLOCK_IN_TIME || '08:00',
@@ -39,11 +74,14 @@ async function main() {
     
     const activityBot = new ActivityBot(loginBot.getPage()!, botConfig);
     
+    // Inject scraped data
+    activityBot.setActivityData(scrapedData);
+    
     try {
-      // Phase 1: Navigate to activity page
+      // Phase 2: Navigate to activity page
       await activityBot.navigateToActivityPage();
       
-      // Phase 2: Fill all activities
+      // Phase 3: Fill all activities
       await activityBot.fillAllActivities();
       
       // Display final results

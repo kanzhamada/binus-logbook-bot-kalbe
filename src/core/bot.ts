@@ -133,12 +133,10 @@ class ActivityBot {
   /**
    * Fill activity form for a specific row
    */
-  private async fillActivityForm(rowIndex: number): Promise<void> {
+  private async fillActivityForm(activityData: ActivityData): Promise<void> {
     try {
-      // Get activity data from Excel
-      const activityData = this.excelData[rowIndex];
       if (!activityData) {
-        throw new Error(`No activity data found for row ${rowIndex + 1}`);
+        throw new Error(`No activity data provided`);
       }
       
       // Fill clock in time - set value directly without triggering popup
@@ -183,7 +181,7 @@ class ActivityBot {
       }
       
     } catch (error) {
-      console.error(`❌ Failed to fill form for row ${rowIndex + 1}:`, error);
+      console.error(`❌ Failed to fill form:`, error);
       throw error;
     }
   }
@@ -215,12 +213,23 @@ class ActivityBot {
   }
 
   /**
+   * Set activity data directly (e.g. from Glide scraping)
+   */
+  public setActivityData(data: ActivityData[]): void {
+    this.excelData = data;
+    this.state.totalRows = data.length;
+    console.log(`📊 Set ${data.length} activities from external source`);
+  }
+
+  /**
    * Phase 2: Fill all activity entries
    */
   public async fillAllActivities(): Promise<void> {
     try {
-      // Load Excel data first
-      await this.loadExcelData();
+      // Load Excel data only if no data has been set
+      if (this.excelData.length === 0) {
+        await this.loadExcelData();
+      }
       
       // Wait for logbook table to load
       await this.page.waitForSelector(BOT_LOCATORS.LOG_BOOK_TABLE, { timeout: 15000 });
@@ -243,6 +252,72 @@ class ActivityBot {
             continue;
           }
           
+          const trimmedDateText = dateText.trim();
+          console.log(`📅 Processing date: ${trimmedDateText}`);
+          
+          // Find matching activity data
+          // Binus Date Format: "DD MMM YYYY" (e.g., "31 Oct 2025") or "DD Month YYYY"
+          // Glide Date Format: "DD Month YYYY" (e.g., "31 October 2025")
+          
+          // We need a robust comparison. 
+          // Let's try to parse both to Date objects or normalize strings.
+          
+          const matchingActivity = this.excelData.find(d => {
+              if (!d.date) return false;
+              
+              // Simple string inclusion check as a fallback
+              // e.g. "31 Oct 2025" vs "31 October 2025"
+              // "31 October 2025".includes("31 Oct") -> true
+              
+              // Normalize both to lowercase
+              const binusDate = trimmedDateText.toLowerCase().replace(',', ''); // Remove comma if present
+              const glideDate = d.date.toLowerCase().replace(',', '');
+              
+              // Check if day and year match
+              const binusParts = binusDate.split(' ').filter(p => p.trim() !== '');
+              const glideParts = glideDate.split(' ').filter(p => p.trim() !== '');
+              
+              // Binus: "thu 02 oct 2025" -> ["thu", "02", "oct", "2025"]
+              // Glide: "31 october 2025" -> ["31", "october", "2025"]
+              
+              let binusDay, binusMonth, binusYear;
+              
+              if (binusParts.length === 4) {
+                  // Format: DayName DD MMM YYYY
+                  binusDay = binusParts[1];
+                  binusMonth = binusParts[2];
+                  binusYear = binusParts[3];
+              } else if (binusParts.length === 3) {
+                  // Format: DD MMM YYYY (fallback)
+                  binusDay = binusParts[0];
+                  binusMonth = binusParts[1];
+                  binusYear = binusParts[2];
+              } else {
+                  return false;
+              }
+              
+              let glideDay, glideMonth, glideYear;
+              if (glideParts.length === 3) {
+                  glideDay = glideParts[0];
+                  glideMonth = glideParts[1];
+                  glideYear = glideParts[2];
+              } else {
+                  return false;
+              }
+
+              if (parseInt(binusDay) === parseInt(glideDay) && binusYear === glideYear) {
+                  // Check month (startsWith to handle "oct" vs "october")
+                  return glideMonth.startsWith(binusMonth) || binusMonth.startsWith(glideMonth);
+              }
+              
+              return false;
+          });
+          
+          if (!matchingActivity) {
+              console.log(`⚠️ No activity found for date ${trimmedDateText}, skipping...`);
+              continue;
+          }
+          
           
           // Find the action button for this specific row (either ENTRY or Edit)
           let actionButton = null;
@@ -256,6 +331,7 @@ class ActivityBot {
               actionButton = await tableRows[i].locator(BOT_LOCATORS.EDIT_BUTTON).first();
               await actionButton.waitFor({ state: 'visible', timeout: 1000 });
             } catch (editError) {
+              console.log(`⚠️ No actionable button for ${trimmedDateText}, skipping...`);
               continue;
             }
           }
@@ -265,20 +341,19 @@ class ActivityBot {
           await this.page.waitForTimeout(1500); // Reduced wait time for faster execution
           
           // Get activity data to check for OFF values
-          const activityData = this.excelData[i];
-          const isOffDay = activityData && (
-            activityData.activity?.toUpperCase().trim() === 'OFF' || 
-            activityData.description?.toUpperCase().trim() === 'OFF'
+          const isOffDay = matchingActivity && (
+            matchingActivity.activity?.toUpperCase().trim() === 'OFF' || 
+            matchingActivity.description?.toUpperCase().trim() === 'OFF'
           );
           
           if (isOffDay) {
             await this.handleOffDayEntry();
           } else {
-            // Use the row index to get the corresponding Excel data in order
-            await this.fillActivityForm(i);
+            // Use the matching activity data
+            await this.fillActivityForm(matchingActivity);
           }
           
-          this.state.processedDates.push(dateText.trim());
+          this.state.processedDates.push(trimmedDateText);
           this.state.currentRow = i + 1;
           
         } catch (error) {

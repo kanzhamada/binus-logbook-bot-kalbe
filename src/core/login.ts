@@ -30,8 +30,12 @@ class LoginBot {
    * Initialize browser with stateful context
    */
   private async initializeBrowser(): Promise<void> {
+    // this.browser = await chromium.launch({
+    //   headless: false, // Set to true for production
+    //   channel: 'chrome'
+    // });
     this.browser = await chromium.launch({
-      headless: false, // Set to true for production
+      headless: false,
       channel: 'chrome'
     });
 
@@ -164,6 +168,7 @@ class LoginBot {
       return true;
       
     } catch (error) {
+      console.error('Detailed Login Error:', error); // Add this goddamn line!
       return false;
     }
   }

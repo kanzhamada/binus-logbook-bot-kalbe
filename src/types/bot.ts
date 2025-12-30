@@ -1,6 +1,7 @@
 export interface ActivityData {
   activity: string;
   description: string;
+  date?: string; // Format: "DD Month YYYY" or similar
 }
 
 export interface ExcelData {

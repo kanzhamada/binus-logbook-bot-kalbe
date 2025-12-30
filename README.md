@@ -1,16 +1,16 @@
 # BINUS Logbook Bot 🤖
 
-An automated bot that streamlines the process of submitting monthly student internship activity data to the BINUS University LMS. This bot reads activity data from an Excel file and automatically fills out the logbook entries, saving you hours of manual data entry.
+An automated bot that streamlines the process of submitting monthly student internship activity data to the BINUS University LMS. This bot **scrapes activity data directly from the "One Kalbe Intern Hub" Glide app** and automatically fills out the logbook entries, saving you hours of manual data entry.
 
 ### ✨ Key Features
 
-- 🚀 **Automated Data Entry**: Fills out logbook entries automatically
-- 📊 **Excel Integration**: Reads data directly from Excel files
-- 🗓️ **Smart OFF Day Detection**: Automatically handles days marked as "OFF"
-- ⚙️ **Flexible Configuration**: Customize month, semester, clock times, and Excel file path
-- 🔒 **Secure**: Your credentials are stored locally and never shared
-- ⚡ **Fast**: Processes multiple entries in minutes instead of hours
-- 🛡️ **Error Handling**: Robust error handling with detailed logging
+- 📱 **Glide Integration**: Automatically scrapes activity logs (Activity & Description) from the Glide app.
+- 🚀 **Automated Data Entry**: Fills out Binus logbook entries automatically using the scraped data.
+- 🗓️ **Smart Date Matching**: Matches activities by date, handling different formats (e.g., "Thu, 02 Oct 2025" vs "02 October 2025").
+- 🔄 **Pagination Support**: Automatically navigates through multiple pages of activities in Glide.
+- ⚙️ **Flexible Configuration**: Customize month, semester, and clock times via environment variables.
+- 🔒 **Secure**: Your credentials are stored locally and never shared.
+- 🛡️ **Error Handling**: Robust error handling with detailed logging.
 
 ## 🚀 Quick Start
 
@@ -20,7 +20,7 @@ Before you begin, make sure you have:
 
 - **Node.js** (version 16 or higher) - [Download here](https://nodejs.org/)
 - **BINUS University credentials** (email and password)
-- **Excel file** with your monthly activity data
+- **Glide App Access** (email used for "One Kalbe Intern Hub")
 
 ### Step-by-Step Setup
 
@@ -39,13 +39,11 @@ Open your terminal/command prompt in the project folder and run:
 npm install
 ```
 
-Wait until the complete, then run this:
+Wait until complete, then run:
 
 ```bash
 npx playwright install
 ```
-
-This will install all required packages for the bot to work.
 
 #### 3. Configure Your Credentials
 
@@ -54,11 +52,10 @@ Create a `.env` file in the project root directory:
 ```bash
 # Copy the example file (if available)
 cp env.example .env
-
 # Or create a new .env file manually
 ```
 
-Add your BINUS credentials and configuration to the `.env` file:
+Add your credentials and configuration to the `.env` file:
 
 ```env
 # Login credentials
@@ -77,37 +74,11 @@ LOGBOOK_MONTH=SEP
 # Internship semester (EVEN or ODD)
 # EVEN: 2420, ODD: 2510
 INTERNSHIP_SEMESTER=ODD
-
-# Excel file path
-EXCEL_FILE_PATH=./src/data/monthly_activity.xlsx
 ```
 
 > ⚠️ **Security Note**: Your credentials are stored locally on your machine and are never shared or uploaded anywhere.
 
-#### 4. Prepare Your Excel Data
-
-Navigate to the `src/data/` folder and modify the `monthly_activity.xlsx` file:
-
-**Excel File Structure:**
-- **Column A**: Date (optional, for reference)
-- **Column B**: Activity (required)
-- **Column C**: Description (required)
-
-**Example Excel Data:**
-| Date | Activity | Description |
-|------|----------|-------------|
-| 2025-01-01 | OFF | OFF |
-| 2025-01-02 | Project Development | Working on frontend components |
-| 2025-01-03 | Database Design | Creating database schema |
-| 2025-01-04 | OFF | OFF |
-| 2025-01-05 | Code Review | Reviewing team member's code |
-
-**Important Notes:**
-- For OFF days, put "OFF" in either the Activity or Description column
-- Make sure all required fields are filled
-- The bot will process rows in order from top to bottom
-
-#### 5. Run the Bot
+#### 4. Run the Bot
 
 Start the bot by running:
 
@@ -115,12 +86,24 @@ Start the bot by running:
 npm start
 ```
 
-The bot will:
-1. 🔐 Log into your BINUS account
-2. 🧭 Navigate to the activity logbook section
-3. 📊 Read your Excel data
-4. 📝 Fill out each day's activities automatically
-5. ✅ Submit all entries
+### 🔄 The Workflow
+
+1.  **Glide Scraping Phase**:
+    *   The bot opens the Glide app.
+    *   It enters your email and clicks "Continue".
+    *   **ACTION REQUIRED**: You will receive an OTP via email. **Enter this OTP in the terminal** when prompted.
+    *   The bot navigates to the "Attendance" section.
+    *   It finds the row for the configured `LOGBOOK_MONTH` and year.
+    *   It scrapes all activity logs, handling pagination if necessary.
+
+2.  **Binus Automation Phase**:
+    *   The bot logs into your BINUS LMS account.
+    *   It navigates to the activity logbook for the specified semester and month.
+    *   It iterates through each day in the logbook.
+    *   It matches the date with the scraped Glide data.
+    *   If a match is found, it fills the **Activity** and **Description** fields with the data from Glide.
+    *   It handles "OFF" days automatically if marked in the Glide data.
+    *   It submits the entry.
 
 ## 📁 Project Structure
 
@@ -128,18 +111,17 @@ The bot will:
 logbook_bot/
 ├── src/
 │   ├── core/           # Core bot functionality
-│   │   ├── bot.ts      # Main bot logic
-│   │   └── login.ts    # Login automation
+│   │   ├── bot.ts      # Binus automation logic
+│   │   ├── glide.ts    # Glide scraping logic
+│   │   └── login.ts    # Binus login automation
 │   ├── constant/       # Configuration files
 │   │   ├── locator.ts  # Web element selectors
 │   │   └── url.ts      # URL constants
-│   ├── data/           # Data files
-│   │   └── monthly_activity.xlsx  # Your activity data
 │   ├── types/          # TypeScript type definitions
+│   ├── utils/          # Utility functions
 │   └── main.ts         # Application entry point
-├── specs/              # Documentation
 ├── package.json        # Project dependencies
-└── README.md          # This file
+└── README.md           # This file
 ```
 
 ## 🔧 Configuration Options
@@ -148,115 +130,42 @@ logbook_bot/
 
 | Variable | Description | Example | Options |
 |----------|-------------|---------|---------|
-| `EMAIL` | Your BINUS email address | `john.doe@binus.ac.id` | - |
+| `EMAIL` | Your BINUS/Glide email address | `john.doe@binus.ac.id` | - |
 | `PASSWORD` | Your BINUS password | `your_password` | - |
-| `CLOCK_IN_TIME` | Clock-in time (12-hour format) | `"08:00 am"` | Any valid time |
-| `CLOCK_OUT_TIME` | Clock-out time (12-hour format) | `"05:00 pm"` | Any valid time |
-| `LOGBOOK_MONTH` | Month for logbook entries | `SEP` | FEB, MAR, APR, MAY, JUN, JUL, AUG, SEP, OCT, NOV, DEC, JAN |
+| `CLOCK_IN_TIME` | Clock-in time | `"08:00 am"` | Any valid time |
+| `CLOCK_OUT_TIME` | Clock-out time | `"05:00 pm"` | Any valid time |
+| `LOGBOOK_MONTH` | Month for logbook entries | `SEP` | SEP, OCT, NOV, etc. |
 | `INTERNSHIP_SEMESTER` | Semester type | `ODD` | EVEN, ODD |
-| `EXCEL_FILE_PATH` | Path to your Excel file | `./src/data/monthly_activity.xlsx` | Any valid file path |
-
-### Month and Semester Configuration
-
-The bot supports flexible month and semester configuration:
-
-**Month Options:**
-- **EVEN Semester**: FEB, MAR, APR, MAY, JUN, JUL, AUG
-- **ODD Semester**: SEP, OCT, NOV, DEC, JAN, FEB
-
-**Semester Options:**
-- **EVEN**: Maps to semester code 2420
-- **ODD**: Maps to semester code 2510
-
-**Examples:**
-```env
-# For September (ODD semester)
-LOGBOOK_MONTH=SEP
-INTERNSHIP_SEMESTER=ODD
-
-# For February (can be either semester)
-LOGBOOK_MONTH=FEB
-INTERNSHIP_SEMESTER=EVEN  # or ODD
-```
-
-### Excel File Configuration
-
-The bot expects your Excel file to have:
-- **Header row**: Can be skipped (the bot starts from row 2)
-- **Column B**: Activity name
-- **Column C**: Activity description
-- **OFF days**: Mark with "OFF" in either Activity or Description column
-
-**Custom Excel File Path:**
-You can specify a custom path to your Excel file using the `EXCEL_FILE_PATH` environment variable:
-```env
-EXCEL_FILE_PATH=./path/to/your/custom_activity.xlsx
-```
 
 ## 🛠️ Troubleshooting
 
 ### Common Issues
 
-**Q: The bot can't find my Excel file**
-- Check the `EXCEL_FILE_PATH` in your `.env` file
-- Make sure the file path is correct and the file exists
-- Check that the file is not open in Excel while running the bot
-- Default path is `./src/data/monthly_activity.xlsx`
+**Q: The bot waits for OTP but I didn't receive it.**
+- Check your spam folder.
+- Ensure the email in `.env` matches your Glide account email.
 
-**Q: Login failed**
-- Verify your credentials in the `.env` file
-- Make sure you're using your BINUS email and password
-- Check if your BINUS account requires 2FA (not currently supported)
+**Q: The bot fails to find the month in Glide.**
+- Ensure `LOGBOOK_MONTH` is set correctly (e.g., `SEP` for September).
+- The bot looks for the month name (e.g., "September") in the Glide list.
 
-**Q: The bot stops at a specific row**
-- Check the console output for error messages
-- Verify that the Excel data for that row is properly formatted
-- Ensure the LMS page has loaded completely
+**Q: Dates are not matching.**
+- The bot expects Binus dates like `Thu, 02 Oct 2025` and Glide dates like `02 October 2025`.
+- If formats change, the date parsing logic in `src/core/bot.ts` might need adjustment.
 
-**Q: OFF days are not being handled correctly**
-- Make sure "OFF" is written exactly as "OFF" (case-sensitive)
-- Check that it's in either the Activity or Description column
-
-**Q: Wrong month or semester is being used**
-- Check your `LOGBOOK_MONTH` setting (use month abbreviation like SEP, OCT, etc.)
-- Verify your `INTERNSHIP_SEMESTER` setting (EVEN or ODD)
-- Make sure the month matches the semester (EVEN: FEB-AUG, ODD: SEP-JAN)
-
-**Q: Clock times are not working correctly**
-- Use 12-hour format with am/pm (e.g., "08:00 am", "05:00 pm")
-- Make sure to include quotes around the time values
-- Check that the format matches exactly: "HH:MM am/pm"
-
-### Getting Help
-
-If you encounter issues:
-
-1. **Check the console output** for detailed error messages
-2. **Verify your Excel data** is properly formatted
-3. **Ensure your credentials** are correct
-4. **Check your internet connection** and BINUS LMS accessibility
+**Q: "OFF" days are not handled.**
+- Ensure the activity log in Glide contains the word "OFF" (case-insensitive) in the description or title.
 
 ## 🔒 Security & Privacy
 
-- ✅ **Local Storage**: All data stays on your computer
-- ✅ **No Data Sharing**: Your credentials are never transmitted to external servers
-- ✅ **Secure Login**: Uses the same login process as manual access
-- ✅ **Temporary Files**: Any temporary files are cleaned up automatically
+- ✅ **Local Storage**: All data stays on your computer.
+- ✅ **No Data Sharing**: Your credentials are never transmitted to external servers.
+- ✅ **Secure Login**: Uses standard automation protocols.
 
 ## 📝 License
 
 This project is licensed under the Freeware License.
 
-## 🤝 Contributing
-
-Contributions are welcome! If you find a bug or have a feature request, please open an issue or submit a pull request.
-
 ## ⚠️ Disclaimer
 
-This bot is for educational and productivity purposes. Use it responsibly and in accordance with your university's policies. The authors are not responsible for any misuse of this tool.
-
----
-
-**Happy Automating! 🚀**
-
-*Save time, focus on learning, let the bot handle the paperwork.*
+This bot is for educational and productivity purposes. Use it responsibly and in accordance with your university's policies.
