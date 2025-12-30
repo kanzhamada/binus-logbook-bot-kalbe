@@ -28,7 +28,7 @@ Before you begin, make sure you have:
 
 ```bash
 git clone <repository-url>
-cd logbook_bot
+cd binus-logbook-bot-kalbe
 ```
 
 #### 2. Install Dependencies
