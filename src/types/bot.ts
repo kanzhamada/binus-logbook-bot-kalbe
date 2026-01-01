@@ -22,3 +22,7 @@ export interface BotState {
   processedDates: string[];
   errors: string[];
 }
+
+export type Semester = 'ODD' | 'EVEN';
+export type Action = 'TRANSFER' | 'GENERATE_REPORT';
+

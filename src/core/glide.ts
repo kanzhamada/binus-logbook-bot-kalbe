@@ -207,6 +207,23 @@ export class GlideBot {
     }
     
     console.log(`✅ Scraped ${activities.length} activities.`);
+    
+    // Navigate back to Attendance list to be ready for next month or finish state
+    console.log('🔙 Returning to Attendance list (using Browser Back)...');
+    try {
+        await this.page.goBack();
+        await this.page.waitForTimeout(2000); // Wait for navigation
+        
+        // Verify we are back by checking for Attendance button or similar
+        try {
+            await this.page.waitForSelector(attendanceButtonSelector, { timeout: 5000 });
+        } catch (e) {
+            console.log('⚠️ Warning: Attendance button not found after going back.');
+        }
+    } catch (e) {
+        console.log('⚠️ Could not go back.');
+    }
+
     return activities;
   }
 

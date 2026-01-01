@@ -56,7 +56,24 @@ class ActivityBot {
   /**
    * Phase 1: Navigate to the activity page
    */
+  /**
+   * Phase 1: Navigate to the activity page (Full Navigation)
+   */
   public async navigateToActivityPage(): Promise<void> {
+    try {
+      await this.initialNavigateToLogbook();
+      await this.switchMonth();
+      console.log('✅ Navigation completed');
+    } catch (error) {
+      console.error('❌ Navigation failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Navigate to Logbook page (Steps 1-6)
+   */
+  public async initialNavigateToLogbook(): Promise<void> {
     try {
       // Step 1: Wait for dashboard to load
       await this.page.waitForLoadState('domcontentloaded'); // Faster than networkidle
@@ -87,16 +104,26 @@ class ActivityBot {
       await this.page.click(BOT_LOCATORS.LOGBOOK_TAB);
       await this.page.waitForTimeout(2000); // Short wait instead of full page load
       
+    } catch (error) {
+       console.error('❌ Initial navigation failed:', error);
+       throw error;
+    }
+  }
+
+  /**
+   * Switch Month Tab (Step 7)
+   */
+  public async switchMonth(monthName?: string): Promise<void> {
+    const targetMonth = monthName || this.config.logbookMonth;
+    try {
       // Step 7: Click logbook month tab based on configuration
-      const monthTabSelector = `a[onclick*="tabClick"][href="#"]:has-text("${this.config.logbookMonth}")`;
+      const monthTabSelector = `a[onclick*="tabClick"][href="#"]:has-text("${targetMonth}")`;
       await this.page.waitForSelector(monthTabSelector, { timeout: 10000 });
       await this.page.click(monthTabSelector);
       await this.page.waitForTimeout(2000); // Short wait instead of full page load
-      
-      console.log('✅ Navigation completed');
-      
+      console.log(`✅ Switched to month: ${targetMonth}`);
     } catch (error) {
-      console.error('❌ Navigation failed:', error);
+      console.error(`❌ Failed to switch to month ${targetMonth}:`, error);
       throw error;
     }
   }
