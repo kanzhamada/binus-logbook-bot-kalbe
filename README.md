@@ -22,6 +22,7 @@ Before you begin, make sure you have:
 - **BINUS University credentials** (email and password)
 - **Glide App Access** (email used for "One Kalbe Intern Hub")
 - **Gemini API Key** (optional, for report generation) - [Get it here](https://aistudio.google.com/app/apikey)
+- **Reference PDF** (required for report generation) - A previous report or template placed in `monthly-report-example/` folder.
 
 ### Step-by-Step Setup
 
@@ -107,11 +108,15 @@ The bot now features an interactive Command Line Interface (CLI):
     *   Handles "OFF" days automatically.
 
 #### Action 2: Generate Monthly Report
-1.  **Glide Scraping**:
+1.  **Prepare Reference PDF**:
+    *   **IMPORTANT**: Place a reference PDF file (e.g., a previous report or a template) inside the `monthly-report-example/` folder.
+    *   The bot uses this PDF to understand the context, style, and specific details (like Student Position) for the report.
+2.  **Glide Scraping**:
     *   Logs into Glide (requires OTP input once).
     *   Scrapes activity logs for all selected months.
-2.  **Report Generation**:
-    *   Sends the scraped data to the Gemini API.
+3.  **Report Generation**:
+    *   Uploads the reference PDF to Gemini for context.
+    *   Sends the scraped data to the Gemini API (`gemini-3-flash-preview`).
     *   Generates a structured report (Introduction, Activities, Technical Competencies, EES, Conclusion).
     *   Saves the report as a Markdown file in the `monthly-report-generated/` directory.
 
@@ -129,6 +134,7 @@ logbook_bot/
 │   ├── types/          # TypeScript type definitions
 │   ├── utils/          # Utility functions
 │   └── main.ts         # Application entry point
+├── monthly-report-example/   # Place your reference PDF here
 ├── monthly-report-generated/ # Output folder for reports
 ├── package.json        # Project dependencies
 └── README.md           # This file
@@ -157,7 +163,8 @@ logbook_bot/
 
 **Q: Gemini Report Generation Fails.**
 - Ensure your `GEMINI_API_KEY` is valid.
-- Check if the model `gemini-2.0-flash` (or `2.5`) is available in your region.
+- **Check for PDF**: Ensure you have placed a valid `.pdf` file in the `monthly-report-example/` directory. The bot needs this file to proceed.
+- Check if the model `gemini-3-flash-preview` is available in your region.
 
 ## 🔒 Security & Privacy
 
