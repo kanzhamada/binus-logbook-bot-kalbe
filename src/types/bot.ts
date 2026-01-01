@@ -1,17 +1,14 @@
+// Updated flow: Removed excelFilePath as data is now scraped from Glide, not loaded from Excel.
+
 export interface ActivityData {
   activity: string;
   description: string;
-  date?: string; // Format: "DD Month YYYY" or similar
-}
-
-export interface ExcelData {
-  [key: string]: ActivityData;
+  date?: string; // Format: "DD Month YYYY"
 }
 
 export interface BotConfig {
   clockInTime: string;
   clockOutTime: string;
-  excelFilePath: string;
   logbookMonth: string;
   internshipSemester: string;
 }
@@ -25,4 +22,3 @@ export interface BotState {
 
 export type Semester = 'ODD' | 'EVEN';
 export type Action = 'TRANSFER' | 'GENERATE_REPORT';
-

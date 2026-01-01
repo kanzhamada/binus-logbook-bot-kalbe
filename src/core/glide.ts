@@ -1,6 +1,7 @@
 import { chromium, Browser, BrowserContext, Page } from 'playwright';
 import * as readline from 'readline';
 import { ActivityData } from '../types/bot.js';
+import chalk from 'chalk';
 
 export class GlideBot {
   private browser: Browser | null = null;
@@ -33,7 +34,7 @@ export class GlideBot {
     });
 
     return new Promise((resolve) => {
-      rl.question('🔑 Please enter the OTP sent to your email: ', (answer) => {
+      rl.question(chalk.yellow('🔑 Please enter the OTP sent to your email: '), (answer) => {
         rl.close();
         resolve(answer.trim());
       });
@@ -44,11 +45,11 @@ export class GlideBot {
     await this.initializeBrowser();
     if (!this.page) throw new Error('Browser not initialized');
 
-    console.log('🌐 Navigating to Glide app...');
+    console.log(chalk.blue('🌐 Navigating to Glide app...'));
     await this.page.goto('https://onekalbeinternhub.glide.page/');
 
     // Wait for email input
-    console.log('📧 Entering email...');
+    console.log(chalk.blue('📧 Entering email...'));
     const emailInputSelector = 'input[type="email"]';
     await this.page.waitForSelector(emailInputSelector);
     await this.page.fill(emailInputSelector, this.email);
@@ -58,14 +59,14 @@ export class GlideBot {
     await this.page.click(continueButtonSelector);
 
     // Wait for OTP input to appear (indicates email was accepted)
-    console.log('⏳ Waiting for OTP input...');
+    console.log(chalk.blue('⏳ Waiting for OTP input...'));
     await this.page.waitForSelector('input[type="tel"]', { timeout: 30000 });
 
     // Ask user for OTP
     const otp = await this.askForOTP();
 
     // Enter OTP
-    console.log('🔐 Entering OTP...');
+    console.log(chalk.blue('🔐 Entering OTP...'));
     await this.page.fill('input[type="tel"]', otp);
 
     // Click Sign In
@@ -74,24 +75,25 @@ export class GlideBot {
 
     // Wait for login to complete
     await this.page.waitForTimeout(5000);
-    console.log('✅ Glide login completed');
+    console.log(chalk.green('✅ Glide login completed'));
   }
 
   public async scrapeData(month: string, year: string): Promise<ActivityData[]> {
     if (!this.page) throw new Error('Page not initialized');
 
-    console.log('📂 Navigating to Attendance...');
+    // Reduced logging
+    // console.log('📂 Navigating to Attendance...');
     const attendanceButtonSelector = 'button:has-text("Attendance")';
     try {
         await this.page.waitForSelector(attendanceButtonSelector, { timeout: 10000 });
         await this.page.click(attendanceButtonSelector);
     } catch (e) {
-        console.log('⚠️ Could not find "Attendance" button, checking if already on page or using alternative selector');
+        // console.log('⚠️ Could not find "Attendance" button, checking if already on page or using alternative selector');
     }
     
     await this.page.waitForTimeout(3000);
 
-    console.log(`🔍 Filtering for ${month} ${year}...`);
+    // console.log(`🔍 Filtering for ${month} ${year}...`);
     
     // Wait for the months table to load
     await this.page.waitForSelector('table tbody tr', { timeout: 10000 });
@@ -106,14 +108,11 @@ export class GlideBot {
             const monthText = await cells[0].innerText();
             const yearText = await cells[1].innerText();
             
-            // Normalize month check (e.g. "OCT" matches "October")
-            // We check if the cell text starts with the config month (e.g. "October" starts with "OCT")
-            // OR if the config month is contained in the cell text
             const mText = monthText.toUpperCase();
             const mConfig = month.toUpperCase();
             
             if ((mText.includes(mConfig) || mConfig.includes(mText)) && yearText.includes(year)) {
-                console.log(`✅ Found month row: ${monthText} ${yearText}, clicking to view details...`);
+                // console.log(`✅ Found month row: ${monthText} ${yearText}, clicking to view details...`);
                 await row.click();
                 monthRowClicked = true;
                 break;
@@ -122,106 +121,86 @@ export class GlideBot {
     }
     
     if (!monthRowClicked) {
-        console.log(`⚠️ Could not find row for ${month} ${year}. Available rows:`);
-        for (const row of rows) {
-             const cells = await row.$$('td');
-             if (cells.length >= 2) {
-                 console.log(`- ${await cells[0].innerText()} ${await cells[1].innerText()}`);
-             }
-        }
+        console.log(chalk.yellow(`⚠️ Could not find row for ${month} ${year}.`));
         return [];
     }
     
     // Wait for the detail view to load (activities list)
-    console.log('⏳ Waiting for activity list to load...');
-    await this.page.waitForTimeout(3000); // Give it time to transition
+    // console.log('⏳ Waiting for activity list to load...');
+    await this.page.waitForTimeout(3000); 
     
-    // Check if we are in the detail view. 
-    // We expect a table of activities.
     try {
         await this.page.waitForSelector('table tbody tr', { timeout: 10000 });
     } catch (e) {
-        console.log('⚠️ Timeout waiting for activity table. The detail view might use a different structure.');
+        // console.log('⚠️ Timeout waiting for activity table.');
     }
 
-    console.log('📥 Scraping activity logs from detail view...');
+    // console.log('📥 Scraping activity logs...');
     const activities: ActivityData[] = [];
     
     let hasNextPage = true;
     let pageNum = 1;
 
     while (hasNextPage) {
-        console.log(`📄 Scraping page ${pageNum}...`);
+        // console.log(`📄 Scraping page ${pageNum}...`);
         
-        // Wait for table rows to be stable
         await this.page.waitForTimeout(2000);
         
         const activityRows = await this.page.$$('table tbody tr');
-        console.log(`Found ${activityRows.length} rows on page ${pageNum}.`);
+        // console.log(`Found ${activityRows.length} rows on page ${pageNum}.`);
 
         for (const row of activityRows) {
             const cells = await row.$$('td');
             const cellTexts = await Promise.all(cells.map(c => c.innerText()));
             
-            // Expected format: ["ATTENDANCE DATE","STUDENT NAME","WFO/WFH","ACTIVITY LOG","STATUS",""]
-            // Index 0: Date
-            // Index 3: Activity Log
-            
             if (cellTexts.length >= 4) {
                 const dateText = cellTexts[0];
                 const activityLog = cellTexts[3];
                 
-                // Skip header row
                 if (dateText === "ATTENDANCE DATE") continue;
                 
                 if (dateText && activityLog) {
                     activities.push({
                         date: dateText,
-                        activity: activityLog, // User requested same value for both
+                        activity: activityLog,
                         description: activityLog
                     });
                 }
             }
         }
         
-        // Check for pagination
-        // Selector: button[aria-label="Next"]
         const nextButtonSelector = 'button[aria-label="Next"]';
         const nextButton = await this.page.$(nextButtonSelector);
         
         if (nextButton) {
             const isDisabled = await nextButton.isDisabled();
             if (!isDisabled) {
-                console.log('➡️ Clicking Next page...');
+                // console.log('➡️ Clicking Next page...');
                 await nextButton.click();
                 pageNum++;
-                await this.page.waitForTimeout(3000); // Wait for page load
+                await this.page.waitForTimeout(3000);
             } else {
-                console.log('⏹️ Next button is disabled. Reached end of list.');
                 hasNextPage = false;
             }
         } else {
-            console.log('⏹️ No pagination found. Reached end of list.');
             hasNextPage = false;
         }
     }
     
-    console.log(`✅ Scraped ${activities.length} activities.`);
+    // console.log(`✅ Scraped ${activities.length} activities.`);
     
-    // Navigate back to Attendance list to be ready for next month or finish state
-    console.log('🔙 Returning to Attendance list (using Browser Back)...');
+    // Navigate back to Attendance list
+    // console.log('🔙 Returning to Attendance list...');
     try {
         await this.page.goBack();
-        await this.page.waitForTimeout(2000); // Wait for navigation
-        
-        // Verify we are back by checking for Attendance button or similar
+        await this.page.waitForTimeout(2000);
         try {
             await this.page.waitForSelector(attendanceButtonSelector, { timeout: 5000 });
         } catch (e) {
-            console.log('⚠️ Warning: Attendance button not found after going back.');
+            // console.log('⚠️ Warning: Attendance button not found after going back.');
         }
     } catch (e) {
-        console.log('⚠️ Could not go back.');
+        // console.log('⚠️ Could not go back.');
     }
 
     return activities;

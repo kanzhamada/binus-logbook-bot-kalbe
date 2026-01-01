@@ -7,9 +7,12 @@ An automated bot that streamlines the process of submitting monthly student inte
 - 📱 **Glide Integration**: Automatically scrapes activity logs (Activity & Description) from the Glide app.
 - 🚀 **Automated Data Entry**: Fills out Binus logbook entries automatically using the scraped data.
 - 🤖 **AI-Powered Reports**: Generates professional monthly reports (.docx ready Markdown) using **Google Gemini AI**.
+- 🧠 **Model Selection**: Choose between different Gemini models (e.g., `gemini-3-flash-preview`, `gemini-2.5-flash`) for report generation.
+- 📊 **Real-Time Progress**: Visual progress bar with real-time updates on the specific date being processed.
+- 📝 **Final Summary**: Provides a detailed summary of successful assignments and missing entries at the end of the run.
 - 🗓️ **Multi-Month Support**: Process multiple months in a single run with a single login.
 - 🔄 **Smart Navigation**: Optimized navigation logic to handle timeouts and avoid redundant page loads.
-- ⚙️ **Interactive CLI**: Easy-to-use terminal interface for selecting semesters, actions, and months.
+- ⚙️ **Interactive CLI**: Modern, easy-to-use terminal interface with colored output and intuitive prompts.
 - 🔒 **Secure**: Your credentials are stored locally and never shared.
 
 ## 🚀 Quick Start
@@ -88,13 +91,14 @@ npm start
 
 ### 🔄 Usage & Workflow
 
-The bot now features an interactive Command Line Interface (CLI):
+The bot features a modern interactive Command Line Interface (CLI):
 
 1.  **Select Semester**: Choose between `ODD` (Ganjil) or `EVEN` (Genap).
 2.  **Select Action**:
     *   `1. Transfer Attendance to Binus Enrichment Apps`: Scrapes Glide and fills the Binus logbook.
     *   `2. Generate Monthly Report (.md)`: Scrapes Glide and generates a report using Gemini.
-3.  **Select Months**: Choose one or multiple months to process.
+3.  **Select Model** (if generating report): Choose the Gemini model you want to use.
+4.  **Select Months**: Choose one or multiple months to process.
 
 #### Action 1: Transfer Attendance
 1.  **Glide Scraping**:
@@ -106,6 +110,8 @@ The bot now features an interactive Command Line Interface (CLI):
     *   Iterates through each selected month and day.
     *   Matches dates and fills **Activity** and **Description** fields.
     *   Handles "OFF" days automatically.
+    *   **Real-time Updates**: Shows the current date being filled in the progress bar.
+    *   **Summary**: Displays a final count of successful and failed assignments.
 
 #### Action 2: Generate Monthly Report
 1.  **Prepare Reference PDF**:
@@ -116,7 +122,7 @@ The bot now features an interactive Command Line Interface (CLI):
     *   Scrapes activity logs for all selected months.
 3.  **Report Generation**:
     *   Uploads the reference PDF to Gemini for context.
-    *   Sends the scraped data to the Gemini API (`gemini-3-flash-preview`).
+    *   Sends the scraped data to the Gemini API using the selected model.
     *   Generates a structured report (Introduction, Activities, Technical Competencies, EES, Conclusion).
     *   Saves the report as a Markdown file in the `monthly-report-generated/` directory.
 
@@ -159,12 +165,12 @@ logbook_bot/
 - Ensure the email in `.env` matches your Glide account email.
 
 **Q: Navigation Timeout in Binus.**
-- The bot now uses optimized navigation. If it still fails, check your internet connection or increase the timeout in `src/constant/locator.ts`.
+- The bot uses optimized navigation. If it still fails, check your internet connection or increase the timeout in `src/constant/locator.ts`.
 
 **Q: Gemini Report Generation Fails.**
 - Ensure your `GEMINI_API_KEY` is valid.
 - **Check for PDF**: Ensure you have placed a valid `.pdf` file in the `monthly-report-example/` directory. The bot needs this file to proceed.
-- Check if the model `gemini-3-flash-preview` is available in your region.
+- Check if the selected model is available in your region.
 
 ## 🔒 Security & Privacy
 

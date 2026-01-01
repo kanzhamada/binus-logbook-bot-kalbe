@@ -3,15 +3,19 @@ import { ActivityData } from '../types/bot.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
+// Updated flow: GeminiBot now accepts a model name parameter for flexible selection during report generation.
+// Data comes from Glide scraping, not Excel.
+
 export class GeminiBot {
   private client: GoogleGenAI;
   private modelName: string;
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, modelName: string = 'gemini-3-flash-preview') {
     this.client = new GoogleGenAI({ apiKey });
-    this.modelName = 'gemini-3-flash-preview';
+    this.modelName = modelName;
   }
 
+  // Generates monthly report using selected Gemini model and scraped activity logs from Glide.
   async generateMonthlyReport(activityLogs: ActivityData[], monthName: string): Promise<string> {
     const prompt = this.constructSystemPrompt(activityLogs, monthName);
     
